@@ -1,5 +1,8 @@
 """
-We split the brown corpus into 3 distinct parts
+Parts of speech tagger based upon the paper 
+http://www.aclweb.org/anthology/A92-1021
+
+We use the Brown corpus for training the tagger and split it into 3 distinct parts
   90% - initial corpus = used to train the initial tagger
   10% - patch corpus = used to train the patch rules
   10% - test corpus = used to test the patch rules found from our training
