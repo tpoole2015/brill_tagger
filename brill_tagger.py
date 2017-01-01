@@ -69,28 +69,28 @@ def errors(tagged, actual):
 def tag_mismatches(tagged, actual): 
   return set([(tag(i, tagged), tag(i, actual)) for i in len(tagged) if tag(i, tagged) != tag(i, actual)])
 
-# rule has the form (match rule, replacement rule)
+# patch has the form (match rule, replacement rule)
 # returns list of transformed tags
-def apply_rule(rule, corpus_tags):
-  match_rule, replacement_rule = rule
+def apply_patch(patch, corpus_tags):
+  match_rule, replacement_rule = patch
   in_tagstr = ' '.join(corpus_tags)
   match_re = re.compile(match_rule)
   out_tagstr = match_re.sub(replacement_rule, in_tagstr)
   return out_tagstr.split(' ')
   
-def gen_rules1(tag_a, tag_b, tag_set):
-  rules = []
+def gen_patches1(tag_a, tag_b, tag_set):
+  patches = set()
   for tag in tag_set:
-    in_rule = ' '.join(tag, tag_a)
-    out_rule = ' '.join(tag, tag_b)
-    rules.append((in_rule, out_rule))
-  return rules
+    match_rule = ' '.join(tag, tag_a)
+    replacement_rule = ' '.join(tag, tag_b)
+    patches.add((match_rule, replacement_rule))
+  return patches
 
 ### MAIN ###
 def main():
   initial_corpus = load_corpus("./data/brown/initial_corpus.txt")
 
-  tag_set = get_tagset(intial_corpus)
+  tag_set = get_tagset(initial_corpus)
   tag_cnts = gen_tagcnts(initial_corpus)
 
   most_likely_tag = {w: max_elem(tag_cnts[w]) for w in tag_cnts}
@@ -99,18 +99,24 @@ def main():
   patch_corpus = load_corpus("./data/brown/patch_corpus.txt")
   x = [initial_tagger(word, most_likely_tag, tag_set) for word, _ in patch_corpus]
 
-  # Now x most likely contains some errors. Store all such errors in a list.
+  patches = set()
   for tag_a, tag_b in tag_mismatches(x, patch_corpus):
-    # iterate through rules (1-8) of Brill paper
-
+    # iterate through the patch templates (1-8) of Brill paper
     # Change tag_a to tag_b when
+    # 1. The preceding (following) word is tagged z
+    patches.union((gen_patches1(tag_a, tag_b, tag_set)))
 
-    # 1. The preceding (following) word is tagged z 
-    rules = gen_rules1(tag_a, tag_b, tag_set)
-    best_rule = None
-    for rule in rules:
-      new_x = apply_rule(rule, x)
-      if len(errors(new_x)) < len(errors(x)): x, best_rule = new_x, rule
+
+  # build list of patches which we'll apply to the corpus
+  patches_to_apply = []
+  while patches:
+    best_patch = None
+    for patch in patches:
+      new_x = apply_patch(patch, x)
+      if len(errors(new_x)) < len(errors(x)): best_patch = patch
+    x = apply_patch(patch, x)
+    patches_to_apply.insert(patch)
+    patches.remove(patch)
 
 if __name__ == "__main__":
   main()
